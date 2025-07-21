@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"errors"
 	"regexp"
 
@@ -9,8 +10,9 @@ import (
 )
 
 type Repository interface {
-	CreateUser(u *User) error
-	Exists(login string) (bool, error)
+	CreateUser(ctx context.Context, u *User) error
+	Exists(ctx context.Context, login string) (bool, error)
+	FindByLogin(ctx context.Context, login string) (*User, error)
 }
 
 type Service struct {
@@ -22,7 +24,7 @@ func NewService(r Repository, adminToken string) *Service {
 	return &Service{repo: r, adminSecret: adminToken}
 }
 
-func (s *Service) Register(adminToken, login, password string) (*User, error) {
+func (s *Service) Register(ctx context.Context, adminToken, login, password string) (*User, error) {
 	if adminToken != s.adminSecret {
 		return nil, errors.New("invalid admin token")
 	}
@@ -34,7 +36,7 @@ func (s *Service) Register(adminToken, login, password string) (*User, error) {
 		return nil, err
 	}
 
-	exists, err := s.repo.Exists(login)
+	exists, err := s.repo.Exists(ctx, login)
 	if err != nil {
 		return nil, err
 	}
@@ -48,12 +50,26 @@ func (s *Service) Register(adminToken, login, password string) (*User, error) {
 	}
 
 	user := &User{
-		ID:       uuid.NewString(),
 		Login:    login,
 		Password: string(hashed),
 	}
 
-	return user, s.repo.CreateUser(user)
+	return user, s.repo.CreateUser(ctx, user)
+}
+
+func (s *Service) Login(ctx context.Context, login, password string) (string, error) {
+	u, err := s.repo.FindByLogin(ctx, login)
+	if err != nil {
+		return "", err
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password)); err != nil {
+		return "", errors.New("invalid credentials")
+	}
+
+	token := uuid.NewString()
+
+	return token, err
 }
 
 func validateLogin(login string) error {

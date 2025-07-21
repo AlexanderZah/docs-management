@@ -7,3 +7,8 @@ type RegisterResponse struct {
 type AuthResponse struct {
 	Token string `json:"token"`
 }
+
+type UploadDocResponse struct {
+	Json map[string]interface{} `json:"json"`
+	File string                 `json:"File"`
+}

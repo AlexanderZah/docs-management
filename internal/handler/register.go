@@ -17,13 +17,14 @@ func NewUserHandler(s *user.Service) *UserHandler {
 }
 
 func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	var req dto.RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondWithError(w, 400, "invalid request")
 		return
 	}
 
-	u, err := h.service.Register(req.AdminToken, req.Login, req.Password)
+	u, err := h.service.Register(ctx, req.AdminToken, req.Login, req.Password)
 	if err != nil {
 		respondWithError(w, 400, err.Error())
 		return

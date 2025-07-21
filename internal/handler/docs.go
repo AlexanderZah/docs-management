@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/AlexanderZah/docs-management/internal/docs"
 	"github.com/AlexanderZah/docs-management/internal/dto"
@@ -24,7 +25,6 @@ func (h *DocsHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Читаем meta
 	metaStr := r.FormValue("meta")
 	var meta dto.Meta
 	if err := json.Unmarshal([]byte(metaStr), &meta); err != nil {
@@ -32,7 +32,6 @@ func (h *DocsHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Читаем json (необязательное поле)
 	jsonStr := r.FormValue("json")
 	var jsonData map[string]interface{}
 	if jsonStr != "" {
@@ -42,8 +41,7 @@ func (h *DocsHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Читаем файл
-	file, header, err := r.FormFile("file")
+	file, _, err := r.FormFile("file")
 	if err != nil {
 		http.Error(w, "File not provided", http.StatusBadRequest)
 		return
@@ -55,15 +53,17 @@ func (h *DocsHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Собираем Document
+	createdAt := time.Now()
 	doc := &docs.Document{
-		Name:   meta.Name,
-		Public: meta.Public,
-		Token:  meta.Token,
-		Mime:   meta.Mime,
-		Grants: meta.Grant,
-		Json:   jsonData,
-		File:   fileBytes,
+		Name:      meta.Name,
+		IsFile:    meta.File,
+		Public:    meta.Public,
+		Token:     meta.Token,
+		Mime:      meta.Mime,
+		Grants:    meta.Grant,
+		Json:      jsonData,
+		Content:   fileBytes,
+		CreatedAt: createdAt,
 	}
 
 	if err := h.service.UploadDocument(r.Context(), doc); err != nil {
@@ -71,12 +71,16 @@ func (h *DocsHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ответ
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"data": map[string]interface{}{
-			"json": doc.Json,
-			"file": header.Filename,
-		},
-	})
+	respond(w, 200, dto.UploadDocResponse{
+		Json: doc.Json,
+		File: meta.Name,
+	}, nil, nil)
+	// // Ответ
+
+	// json.NewEncoder(w).Encode(map[string]interface{}{
+	// 	"data": map[string]interface{}{
+	// 		"json": doc.Json,
+	// 		"file": header.Filename,
+	// 	},
+	// })
 }
