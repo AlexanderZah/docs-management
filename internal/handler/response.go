@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 )
 
@@ -25,7 +26,9 @@ func respond(w http.ResponseWriter, code int, data interface{}, resp interface{}
 		Response: resp,
 		Data:     data,
 	}
-	json.NewEncoder(w).Encode(res)
+	if errr := json.NewEncoder(w).Encode(res); errr != nil {
+		fmt.Println("JSON encode error:", errr)
+	}
 }
 
 func respondWithError(w http.ResponseWriter, code int, msg string) {

@@ -19,12 +19,16 @@ func NewRouter(dep Dependencies) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	userHandler := handler.NewUserHandler(dep.UserService)
-	authHandler := handler.NewAuthHandler(dep.UserService)
 	docsHandler := handler.NewDocsHandler(dep.DocsService)
 	r.Route("/api", func(r chi.Router) {
 		r.Post("/register", userHandler.Register)
-		r.Post("/auth", authHandler.Login)
+		r.Post("/auth", userHandler.Login)
+		r.Delete("/auth/{token}", userHandler.Logout)
 		r.Post("/docs", docsHandler.Upload)
+		r.Get("/docs", docsHandler.Get)
+		r.Head("/docs", docsHandler.Get)
+		r.Get("/docs/{id}", docsHandler.GetByID)
+		r.Head("/docs/{id}", docsHandler.GetByID)
 	})
 
 	return r

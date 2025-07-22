@@ -57,3 +57,19 @@ func (r *Repo) FindByLogin(ctx context.Context, login string) (*user.User, error
 	}
 	return &u, nil
 }
+
+func (r *Repo) DeleteSession(ctx context.Context, token string) error {
+	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+	const query = `DELETE FROM sessions WHERE token = $1`
+	_, err = tx.Exec(ctx, query, token)
+	if err != nil {
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
+			return errors.New("session already deleted")
+		}
+	}
+	return tx.Commit(ctx)
+}

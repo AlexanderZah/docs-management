@@ -13,6 +13,7 @@ type Repository interface {
 	CreateUser(ctx context.Context, u *User) error
 	Exists(ctx context.Context, login string) (bool, error)
 	FindByLogin(ctx context.Context, login string) (*User, error)
+	DeleteSession(ctx context.Context, token string) error
 }
 
 type Service struct {
@@ -70,6 +71,10 @@ func (s *Service) Login(ctx context.Context, login, password string) (string, er
 	token := uuid.NewString()
 
 	return token, err
+}
+
+func (s *Service) Logout(ctx context.Context, token string) error {
+	return s.repo.DeleteSession(ctx, token)
 }
 
 func validateLogin(login string) error {

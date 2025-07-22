@@ -34,5 +34,7 @@ func main() {
 	})
 
 	log.Println("Server on ", cfg.Address)
-	http.ListenAndServe(cfg.Address, r)
+	if err := http.ListenAndServe(cfg.Address, r); err != nil {
+		log.Fatalf("Server failed to start: %v", err)
+	}
 }

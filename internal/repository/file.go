@@ -9,7 +9,6 @@ import (
 	"github.com/AlexanderZah/docs-management/internal/docs"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/lib/pq"
 )
 
 const documentsTable = "documents"
@@ -65,22 +64,37 @@ func (r *DocsRepo) SaveDocument(ctx context.Context, doc *docs.Document) error {
 	return tx.Commit(ctx)
 }
 
-func (r *DocsRepo) GetDocuments(ctx context.Context, token, login, key, value, limit string) ([]docs.Document, error) {
+func (r *DocsRepo) GetDocuments(ctx context.Context, token, login, key, value string, limit int) ([]docs.Document, error) {
 	query := `
         SELECT id, name, is_file, is_public, token, mime, grants, json_data, content, created_at
         FROM documents
-        WHERE token = $1 OR $2 = ANY(grants)
+        WHERE (token = $1 OR $2 = ANY(grants))
     `
 	args := []interface{}{token, login}
 
+	// Допустимые ключи в JSON
+	allowedKeys := map[string]bool{
+		"name":       true,
+		"is_file":    true,
+		"is_public":  true,
+		"mime":       true,
+		"json_data":  true,
+		"content":    true,
+		"created_at": true,
+	}
+
 	if key != "" && value != "" {
-		query += fmt.Sprintf(" AND json_data->>%s = $%d", pq.QuoteLiteral(key), len(args)+1)
-		args = append(args, value)
+		if allowedKeys[key] {
+			query += fmt.Sprintf(" AND %s = $%d", key, len(args)+1)
+			args = append(args, value)
+		} else {
+			return nil, fmt.Errorf("invalid key for filtering")
+		}
 	}
 
 	query += " ORDER BY name, created_at"
-	if limit != "" {
-		query += fmt.Sprintf(" LIMIT %s", limit)
+	if limit != 0 {
+		query += fmt.Sprintf(" LIMIT %d", limit)
 	}
 
 	rows, err := r.db.Query(ctx, query, args...)

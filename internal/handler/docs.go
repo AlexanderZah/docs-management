@@ -4,18 +4,21 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/AlexanderZah/docs-management/internal/docs"
 	"github.com/AlexanderZah/docs-management/internal/dto"
+	"github.com/go-chi/chi/v5"
 )
 
 type DocsHandler struct {
-	service *docs.Service
+	Service *docs.Service
 }
 
 func NewDocsHandler(s *docs.Service) *DocsHandler {
-	return &DocsHandler{service: s}
+	return &DocsHandler{Service: s}
 }
 
 func (h *DocsHandler) Upload(w http.ResponseWriter, r *http.Request) {
@@ -66,7 +69,7 @@ func (h *DocsHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		CreatedAt: createdAt,
 	}
 
-	if err := h.service.UploadDocument(r.Context(), doc); err != nil {
+	if err := h.Service.UploadDocument(r.Context(), doc); err != nil {
 		http.Error(w, "Failed to save document", http.StatusInternalServerError)
 		return
 	}
@@ -75,12 +78,125 @@ func (h *DocsHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		Json: doc.Json,
 		File: meta.Name,
 	}, nil, nil)
-	// // Ответ
+}
 
-	// json.NewEncoder(w).Encode(map[string]interface{}{
-	// 	"data": map[string]interface{}{
-	// 		"json": doc.Json,
-	// 		"file": header.Filename,
-	// 	},
-	// })
+func (h *DocsHandler) Get(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Получение токена
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		token = r.Header.Get("Authorization")
+		token = strings.TrimPrefix(token, "Bearer ")
+	}
+	if token == "" {
+		http.Error(w, "missing token", http.StatusUnauthorized)
+		return
+	}
+
+	// Получение дополнительных параметров
+	login := r.URL.Query().Get("login")
+	key := r.URL.Query().Get("key")
+	value := r.URL.Query().Get("value")
+	limitStr := r.URL.Query().Get("limit")
+
+	limit := 100
+	if limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+			limit = l
+		}
+	}
+
+	docs, err := h.Service.GetDocuments(ctx, token, login, key, value, limit)
+	if err != nil {
+		http.Error(w, "failed to fetch documents", http.StatusInternalServerError)
+		return
+	}
+	var docsResp []dto.GetDocResponse
+	for _, d := range docs {
+		docsResp = append(docsResp, dto.GetDocResponse{
+			ID:        d.ID,
+			Name:      d.Name,
+			Mime:      d.Mime,
+			IsFile:    d.IsFile,
+			Public:    d.Public,
+			CreatedAt: d.CreatedAt.Format("2006-01-02 15:04:05"),
+			Grants:    d.Grants,
+		})
+	}
+
+	// Формируем map, который будет в "data"
+	data := map[string]interface{}{
+		"docs": docsResp,
+	}
+	respond(w, 200, data, "test", nil)
+}
+
+func (h *DocsHandler) GetByID(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	idParam := chi.URLParam(r, "id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		token = r.Header.Get("Authorization")
+		token = strings.TrimPrefix(token, "Bearer ")
+	}
+	if token == "" {
+		http.Error(w, "missing token", http.StatusUnauthorized)
+		return
+	}
+
+	doc, err := h.Service.GetDocumentByID(ctx, int32(id), token)
+	if err != nil {
+		http.Error(w, "document not found or access denied", http.StatusNotFound)
+		return
+	}
+
+	if doc.IsFile {
+		w.Header().Set("Content-Type", doc.Mime)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(doc.Content)
+		return
+	}
+	respond(w, 200, doc.Json, nil, nil)
+}
+
+func (h *DocsHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	idParam := chi.URLParam(r, "id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		http.Error(w, "Invalid document ID", http.StatusBadRequest)
+		return
+	}
+
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		token = strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	}
+	if token == "" {
+		http.Error(w, "Missing token", http.StatusUnauthorized)
+		return
+	}
+
+	err = h.Service.DeleteDocument(ctx, int32(id), token)
+	if err != nil {
+		http.Error(w, "Failed to delete document or not authorized", http.StatusForbidden)
+		return
+	}
+
+	resp := map[string]interface{}{
+		"response": map[string]bool{
+			idParam: true,
+		},
+	}
+	respond(w, 200, nil, resp, nil)
+
 }
