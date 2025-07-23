@@ -42,7 +42,7 @@ docker-compose -f deployments/docker-compose.yaml down
 
 Все запросы к документам требуют передачу токена для авторизации в заголовке.
 
-- **GET /api/docs**  
+- **GET/HEAD /api/docs**  
   Получить список документов.  
   Поддерживает фильтрацию по ключу и значению (например, имя документа).  
   Параметры:  
@@ -51,7 +51,7 @@ docker-compose -f deployments/docker-compose.yaml down
   - `key` и `value` — фильтры по полям документа  
   - `limit` — ограничение количества результатов
 
-- **GET /api/docs/{id}**  
+- **GET/HEAD /api/docs/{id}**  
   Получить документ по ID. Требует токен в заголовке.
 
 - **POST /api/docs**  
