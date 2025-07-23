@@ -13,6 +13,7 @@ type Config struct {
 	DbUrl      string `yaml:"db_url" env-required:"true"`
 	AdminToken string `yaml:"admin_token" env-required:"true"`
 	HTTPServer `yaml:"http_server"`
+	Redis      RedisConfig `yaml:"redis"`
 }
 
 type HTTPServer struct {
@@ -21,12 +22,17 @@ type HTTPServer struct {
 	IdleTimeout time.Duration `yaml:"idle_timeout" env-default:"60s"`
 }
 
+type RedisConfig struct {
+	Addr     string `yaml:"addr" env-default:"localhost:6379"`
+	Password string `yaml:"password" env-default:""`
+	DB       int    `yaml:"db" env-default:"0"`
+}
+
 func MustLoad() *Config {
-	// Получаем путь до конфиг-файла из env-переменной CONFIG_PATH
-	// configPath := os.Getenv("CONFIG_PATH")
-	configPath := "./config/local.yaml"
+	configPath := os.Getenv("CONFIG_PATH")
+
 	if configPath == "" {
-		log.Fatal("CONFIG_PATH environment variable is not set")
+		configPath = "./config/local.yaml"
 	}
 
 	// Проверяем существование конфиг-файла

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/AlexanderZah/docs-management/internal/cache"
 	"github.com/AlexanderZah/docs-management/internal/docs"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -14,11 +15,12 @@ import (
 const documentsTable = "documents"
 
 type DocsRepo struct {
-	db *pgxpool.Pool
+	db    *pgxpool.Pool
+	cache *cache.RedisCache
 }
 
-func NewDocsRepo(db *pgxpool.Pool) *DocsRepo {
-	return &DocsRepo{db: db}
+func NewDocsRepo(db *pgxpool.Pool, redisCache *cache.RedisCache) *DocsRepo {
+	return &DocsRepo{db: db, cache: redisCache}
 }
 
 func (r *DocsRepo) SaveDocument(ctx context.Context, doc *docs.Document) error {
@@ -61,7 +63,22 @@ func (r *DocsRepo) SaveDocument(ctx context.Context, doc *docs.Document) error {
 		return fmt.Errorf("failed to insert document: %w", err)
 	}
 
-	return tx.Commit(ctx)
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit tx: %w", err)
+	}
+
+	docJSON, err := json.Marshal(doc)
+	if err != nil {
+		return fmt.Errorf("failed to marshal doc for cache: %w", err)
+	}
+
+	cacheKey := fmt.Sprintf("doc:%d", doc.ID)
+	docJSONStr := string(docJSON)
+	if err := r.cache.Set(ctx, cacheKey, docJSONStr); err != nil {
+		fmt.Printf("failed to cache document: %v\n", err)
+	}
+
+	return nil
 }
 
 func (r *DocsRepo) GetDocuments(ctx context.Context, token, login, key, value string, limit int) ([]docs.Document, error) {
@@ -71,7 +88,6 @@ func (r *DocsRepo) GetDocuments(ctx context.Context, token, login, key, value st
         WHERE (token = $1 OR $2 = ANY(grants))
     `
 	args := []interface{}{token, login}
-
 
 	allowedKeys := map[string]bool{
 		"name":       true,
@@ -134,6 +150,16 @@ func (r *DocsRepo) GetDocuments(ctx context.Context, token, login, key, value st
 }
 
 func (r *DocsRepo) GetDocumentByID(ctx context.Context, id int32, login string) (*docs.Document, error) {
+	cacheKey := fmt.Sprintf("doc:%d", id)
+	if r.cache != nil {
+		cached, err := r.cache.Get(ctx, cacheKey)
+		if err == nil && cached != "" {
+			var doc docs.Document
+			if err := json.Unmarshal([]byte(cached), &doc); err == nil {
+				return &doc, nil
+			}
+		}
+	}
 	var doc docs.Document
 	var jsonData []byte
 

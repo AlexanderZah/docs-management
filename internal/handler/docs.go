@@ -129,7 +129,7 @@ func (h *DocsHandler) Get(w http.ResponseWriter, r *http.Request) {
 	data := map[string]interface{}{
 		"docs": docsResp,
 	}
-	respond(w, 200, data, "test", nil)
+	respond(w, 200, data, nil, nil)
 }
 
 func (h *DocsHandler) GetByID(w http.ResponseWriter, r *http.Request) {
