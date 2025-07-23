@@ -192,10 +192,8 @@ func (h *DocsHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := map[string]interface{}{
-		"response": map[string]bool{
-			idParam: true,
-		},
+	resp := map[string]bool{
+		idParam: true,
 	}
 	respond(w, 200, nil, resp, nil)
 

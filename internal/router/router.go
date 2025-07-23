@@ -30,6 +30,7 @@ func NewRouter(dep Dependencies) http.Handler {
 		r.Head("/docs", docsHandler.Get)
 		r.Get("/docs/{id}", docsHandler.GetByID)
 		r.Head("/docs/{id}", docsHandler.GetByID)
+		r.Delete("/docs/{id}", docsHandler.Delete)
 	})
 
 	return r
