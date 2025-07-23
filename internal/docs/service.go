@@ -20,7 +20,6 @@ func NewService(r Repository) *Service {
 }
 
 func (s *Service) UploadDocument(ctx context.Context, doc *Document) error {
-	// Можно добавить валидацию или логику
 	return s.repo.SaveDocument(ctx, doc)
 }
 

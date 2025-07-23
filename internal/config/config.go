@@ -35,14 +35,12 @@ func MustLoad() *Config {
 		configPath = "./config/local.yaml"
 	}
 
-	// Проверяем существование конфиг-файла
 	if _, err := os.Stat(configPath); err != nil {
 		log.Fatalf("error opening config file: %s", err)
 	}
 
 	var cfg Config
 
-	// Читаем конфиг-файл и заполняем нашу структуру
 	err := cleanenv.ReadConfig(configPath, &cfg)
 	if err != nil {
 		log.Fatalf("error reading config file: %s", err)

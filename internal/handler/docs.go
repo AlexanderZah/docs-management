@@ -83,7 +83,6 @@ func (h *DocsHandler) Upload(w http.ResponseWriter, r *http.Request) {
 func (h *DocsHandler) Get(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	// Получение токена
 	token := r.URL.Query().Get("token")
 	if token == "" {
 		token = r.Header.Get("Authorization")
@@ -94,7 +93,6 @@ func (h *DocsHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Получение дополнительных параметров
 	login := r.URL.Query().Get("login")
 	key := r.URL.Query().Get("key")
 	value := r.URL.Query().Get("value")
@@ -125,7 +123,6 @@ func (h *DocsHandler) Get(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	// Формируем map, который будет в "data"
 	data := map[string]interface{}{
 		"docs": docsResp,
 	}
