@@ -18,6 +18,7 @@ type Dependencies struct {
 func NewRouter(dep Dependencies) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
+	r.Use(handler.NewAuthMiddleware(dep.UserService).Handle)
 	userHandler := handler.NewUserHandler(dep.UserService)
 	docsHandler := handler.NewDocsHandler(dep.DocsService)
 	r.Route("/api", func(r chi.Router) {

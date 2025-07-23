@@ -27,7 +27,6 @@ func main() {
 
 	docsRepo := repository.NewDocsRepo(pool)
 	docsService := docs.NewService(docsRepo)
-	// Создание роутера с передачей зависимостей
 	r := router.NewRouter(router.Dependencies{
 		UserService: userService,
 		DocsService: docsService,

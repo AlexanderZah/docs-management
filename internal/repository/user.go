@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	er "github.com/AlexanderZah/docs-management/internal/myerrors"
 	"github.com/AlexanderZah/docs-management/internal/user"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
@@ -56,6 +57,53 @@ func (r *Repo) FindByLogin(ctx context.Context, login string) (*user.User, error
 		return nil, err
 	}
 	return &u, nil
+}
+
+func (r *Repo) GetSession(ctx context.Context, login string) (string, error) {
+	const query = `SELECT token FROM sessions WHERE user_login = $1`
+
+	var token string
+	err := r.db.QueryRow(ctx, query, login).Scan(&token)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", er.ErrSessionNotFound
+		}
+		return "", fmt.Errorf("failed to get session: %w", err)
+	}
+
+	return token, nil
+}
+
+func (r *Repo) GetSessionByToken(ctx context.Context, token string) (string, error) {
+	const query = `SELECT user_login FROM sessions WHERE token = $1`
+
+	var login string
+	err := r.db.QueryRow(ctx, query, token).Scan(&login)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", er.ErrSessionNotFound
+		}
+		return "", fmt.Errorf("failed to get session: %w", err)
+	}
+
+	return login, nil
+}
+
+func (r *Repo) SaveSession(ctx context.Context, token, login string) error {
+	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+	const query = `
+        INSERT INTO sessions (token, user_login) 
+        VALUES ($1, $2)
+    `
+	_, err = r.db.Exec(ctx, query, token, login)
+	if err != nil {
+		return fmt.Errorf("failed to save session: %w", err)
+	}
+	return tx.Commit(ctx)
 }
 
 func (r *Repo) DeleteSession(ctx context.Context, token string) error {

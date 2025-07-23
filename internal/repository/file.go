@@ -72,7 +72,7 @@ func (r *DocsRepo) GetDocuments(ctx context.Context, token, login, key, value st
     `
 	args := []interface{}{token, login}
 
-	// Допустимые ключи в JSON
+
 	allowedKeys := map[string]bool{
 		"name":       true,
 		"is_file":    true,

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"regexp"
 
+	er "github.com/AlexanderZah/docs-management/internal/myerrors"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -13,7 +14,10 @@ type Repository interface {
 	CreateUser(ctx context.Context, u *User) error
 	Exists(ctx context.Context, login string) (bool, error)
 	FindByLogin(ctx context.Context, login string) (*User, error)
+	GetSession(ctx context.Context, login string) (string, error)
+	SaveSession(ctx context.Context, token string, login string) error
 	DeleteSession(ctx context.Context, token string) error
+	GetSessionByToken(ctx context.Context, token string) (string, error)
 }
 
 type Service struct {
@@ -67,14 +71,24 @@ func (s *Service) Login(ctx context.Context, login, password string) (string, er
 	if err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password)); err != nil {
 		return "", errors.New("invalid credentials")
 	}
+	token, err := s.repo.GetSession(ctx, login)
+	if err != nil && !errors.Is(err, er.ErrSessionNotFound) {
+		return "", errors.New(err.Error())
+	}
+	if errors.Is(err, er.ErrSessionNotFound) {
+		token = uuid.NewString()
+		s.repo.SaveSession(ctx, token, login)
+	}
 
-	token := uuid.NewString()
-
-	return token, err
+	return token, nil
 }
 
 func (s *Service) Logout(ctx context.Context, token string) error {
 	return s.repo.DeleteSession(ctx, token)
+}
+
+func (s *Service) GetSessionByToken(ctx context.Context, token string) (string, error) {
+	return s.repo.GetSessionByToken(ctx, token)
 }
 
 func validateLogin(login string) error {
