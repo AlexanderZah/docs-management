@@ -7,23 +7,25 @@
 
 ## Как запустить
 
-1. Клонируйте репозиторий:
+1. Клонировать репозиторий:
 
 ```bash
 git clone https://github.com/AlexanderZah/docs-management.git
+```
+2. Перейти в папку
+```
 cd docs-management
 ```
-
-2. Запустите сервисы с помощью Docker Compose:
+3. Запустить сервисы:
 ```bash
 docker-compose -f deployments/docker-compose.yaml up --build
 ```
 
-3. Приложение будет доступно по адресу:
+4. Приложение будет доступно по адресу:
 ```
 http://localhost:8082
 ```
-4. Чтобы остановить контейнеры, выполните:
+5. Чтобы остановить контейнеры:
 ```
 docker-compose -f deployments/docker-compose.yaml down
 ```
@@ -42,7 +44,7 @@ docker-compose -f deployments/docker-compose.yaml down
 
 Все запросы к документам требуют передачу токена для авторизации в заголовке.
 
-- **GET/HEAD /api/docs**  
+- **GET /api/docs**  
   Получить список документов.  
   Поддерживает фильтрацию по ключу и значению (например, имя документа).  
   Параметры:  
@@ -51,7 +53,7 @@ docker-compose -f deployments/docker-compose.yaml down
   - `key` и `value` — фильтры по полям документа  
   - `limit` — ограничение количества результатов
 
-- **GET/HEAD /api/docs/{id}**  
+- **GET /api/docs/{id}**  
   Получить документ по ID. Требует токен в заголовке.
 
 - **POST /api/docs**  
