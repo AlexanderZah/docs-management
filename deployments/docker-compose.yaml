@@ -41,24 +41,24 @@ services:
     networks:
       - backend
 
-  app:
-    build:
-      context: ..
-      dockerfile: deployments/Dockerfile
-    container_name: docs_app
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    environment:
-      CONFIG_PATH: /root/config/docker.yaml
-    ports:
-      - "8082:8082"
-    volumes:
-      - ./:/app
-    networks:
-      - backend
+  # app:
+  #   build:
+  #     context: ..
+  #     dockerfile: deployments/Dockerfile
+  #   container_name: docs_app
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_started
+  #   environment:
+  #     CONFIG_PATH: /root/config/docker.yaml
+  #   ports:
+  #     - "8082:8082"
+  #   volumes:
+  #     - ./:/app
+  #   networks:
+  #     - backend
 
 networks:
   backend:
